@@ -23,8 +23,7 @@ class WaveformTest extends TestCase
         $expectedSvg  = file_get_contents(__DIR__ . '/fixtures/expectedWaveform.svg');
         $this->assertSame($svg, $expectedSvg);
 
-        $timestamp = time();
-        file_put_contents(__DIR__ . "/results/peeks-$timestamp.json", $jsonPeeks);
-        file_put_contents(__DIR__ . "/results/waveform-$timestamp.svg", $svg);
+        file_put_contents(__DIR__ . "/results/peeks.json", $jsonPeeks);
+        file_put_contents(__DIR__ . "/results/waveform.svg", $svg);
     }
 }

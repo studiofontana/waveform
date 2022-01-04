@@ -55,6 +55,7 @@ class WaveGenerator
         }
 
         fclose($stream);
+        unlink($wavFile);
 
         return $result;
     }
@@ -126,6 +127,7 @@ class WaveGenerator
         $tempWav  = $this->tempPath . "/$tempName.wav";
         $command  = "lame $mp3File -m m -S -f -b 16 --resample 8 $tempMp3 && lame -S --decode $tempMp3 $tempWav";
         shell_exec($command);
+        unlink($tempMp3);
         return $tempWav;
     }
 
