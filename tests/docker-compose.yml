@@ -1,0 +1,10 @@
+version: '3.3'
+services:
+  php:
+    build: ./docker/.
+    volumes:
+    - ../.:/var/www/waveform
+    working_dir: /var/www/waveform
+    container_name: waveform_tests
+    tty: true
+    stdin_open: true
