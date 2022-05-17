@@ -33,6 +33,7 @@ class WaveformTest extends TestCase
             ['1sec-BBBSD30A_22'],
             ['15sec-SATVCD140#34'],
             ['empty'],
+            ['long-empty', 'empty'],
             ['long-AMPD7_1'],
             ['gaps-GID68#35'],
         ];
@@ -41,11 +42,14 @@ class WaveformTest extends TestCase
     /**
      * @dataProvider getWaveformTests
      */
-    public function testVariousSvgGeneration($file): void
+    public function testVariousSvgGeneration($file, ?string $result = null): void
     {
+        if (!$result) {
+            $result = $file;
+        }
         $waveform  = json_decode(file_get_contents(__DIR__ . "/fixtures/waveform-$file.json"), true);
         $generator = new WaveformSVGGeneratorPolygon();
         $svg = $generator->generateSVG($waveform);
-        $this->assertSame(file_get_contents(__DIR__ . "/fixtures/result-$file.svg"), $svg);
+        $this->assertSame(file_get_contents(__DIR__ . "/fixtures/result-$result.svg"), $svg);
     }
 }
