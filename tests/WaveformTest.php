@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 
 class WaveformTest extends TestCase
 {
-    public function testGeneration()
+    public function testMp3ToSvgGeneration()
     {
         $generator     = new WaveGenerator(__DIR__ . '/../temp');
         $converter     = new PeekConverter();
@@ -25,5 +25,27 @@ class WaveformTest extends TestCase
 
         file_put_contents(__DIR__ . "/results/peeks.json", $jsonPeeks);
         file_put_contents(__DIR__ . "/results/waveform.svg", $svg);
+    }
+
+    public function getWaveformTests(): array
+    {
+        return [
+            ['1sec-BBBSD30A_22'],
+            ['15sec-SATVCD140#34'],
+            ['empty'],
+            ['long-AMPD7_1'],
+            ['gaps-GID68#35'],
+        ];
+    }
+
+    /**
+     * @dataProvider getWaveformTests
+     */
+    public function testVariousSvgGeneration($file): void
+    {
+        $waveform  = json_decode(file_get_contents(__DIR__ . "/fixtures/waveform-$file.json"), true);
+        $generator = new WaveformSVGGeneratorPolygon();
+        $svg = $generator->generateSVG($waveform);
+        $this->assertSame(file_get_contents(__DIR__ . "/fixtures/result-$file.svg"), $svg);
     }
 }
