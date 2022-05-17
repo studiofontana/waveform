@@ -34,7 +34,11 @@ class PeekConverter
      */
     protected function scaleDownPeeks(array $peeks): array
     {
-        $capModifier = 1 / max($peeks);
+        $maxPeek         = max($peeks);
+        if ($maxPeek == 0) {
+            return [0];
+        }
+        $capModifier = 1 / $maxPeek;
         $waveform    = [];
         foreach ($peeks as $point) {
             $peek = $point * $capModifier;
