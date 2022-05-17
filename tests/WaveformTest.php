@@ -27,6 +27,16 @@ class WaveformTest extends TestCase
         file_put_contents(__DIR__ . "/results/waveform.svg", $svg);
     }
 
+    public function testWrongFormatPeekGeneration()
+    {
+        $generator     = new WaveGenerator(__DIR__ . '/../temp');
+        $converter     = new PeekConverter();
+        $testedMp3     = __DIR__ . '/fixtures/from-wrong-format/actualy-mp4.mp3';
+        $waveform      = $generator->generateWaves($testedMp3);
+        $peeks         = $converter->wavesToScaledPeeks($waveform);
+        $this->assertSame($peeks, [0]);
+    }
+
     public function getWaveformTests(): array
     {
         return [
