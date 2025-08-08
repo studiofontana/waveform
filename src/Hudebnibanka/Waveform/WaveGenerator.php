@@ -1,4 +1,6 @@
-<?php namespace Hudebnibanka\Waveform;
+<?php
+
+namespace Hudebnibanka\Waveform;
 
 class WaveGenerator
 {
@@ -19,44 +21,59 @@ class WaveGenerator
     public function generateWaves(string $mp3File): array
     {
         $wavFile = $this->createOriginWavFile($mp3File);
-        $stream  = fopen($wavFile, 'r');
-        $heading = $this->getWavHeading($stream);
+        $stream  = fopen($wavFile, 'rb');
 
-        $bitRate   = $this->getBitRate($heading[10]);
-        $ratio     = $this->isStereo($heading[6]) ? 40 : 80;
-        $dataSize  = floor((filesize($wavFile) - 44) / ($ratio + $bitRate) + 1);
-        $dataPoint = 0;
-        $detail    = ceil($dataSize / 3000);
+        $header = $this->getWavHeading($stream);
+        $bitRate = $this->getBitRate($header[10]); // 1 or 2
+        $isStereo = $this->isStereo($header[6]);   // true or false
+        $channels = $isStereo ? 2 : 1;
+        $bytesPerSample = $bitRate;
+        $blockAlign = $channels * $bytesPerSample;
+
+        $dataSize = floor((filesize($wavFile) - 44) / $blockAlign);
+        $detail = ceil($dataSize / 3000);
 
         $result = [];
-        while (!feof($stream) && $dataPoint < $dataSize) {
-            if ($this->detailIsLacking($dataPoint++, $detail)) {
-                fseek($stream, $ratio + $bitRate, SEEK_CUR);
+
+        for ($i = 0; $i < $dataSize; $i++) {
+            if ($this->detailIsLacking($i, $detail)) {
+                fseek($stream, $blockAlign, SEEK_CUR);
                 continue;
             }
 
-            $bytes = $this->numberOfBytesDependingOnBitRate($bitRate, $stream);
-            switch ($bitRate) {
-                case self::BIT_RATE_8:
-                    $result[] = $this->findValues($bytes[0], $bytes[1]);
-                    break;
-                case self::BIT_RATE_16:
-                    if (ord($bytes[1]) & 128) {
-                        $temp = 0;
-                    } else {
-                        $temp = 128;
-                    }
-                    $temp     = chr((ord($bytes[1]) & 127) + $temp);
-                    $result[] = floor($this->findValues($bytes[0], $temp) / 256);
-                    break;
+            $frame = fread($stream, $blockAlign);
+            if (strlen($frame) < $blockAlign) {
+                break; // Prevent underflow
             }
 
-            $this->skipBytes($stream, $ratio);
+            $samples = [];
+
+            for ($ch = 0; $ch < $channels; $ch++) {
+                $offset = $ch * $bytesPerSample;
+                $bytes = substr($frame, $offset, $bytesPerSample);
+
+                if ($bitRate === self::BIT_RATE_8) {
+                    $samples[] = ord($bytes);
+                } elseif ($bitRate === self::BIT_RATE_16) {
+                    $samples[] = unpack('s', $bytes)[1];
+                }
+            }
+
+            // Mix stereo to mono if needed
+            $avg = array_sum($samples) / count($samples);
+
+            // Normalize 16-bit to 0–255
+            if ($bitRate === self::BIT_RATE_16) {
+                $normalized = floor(($avg + 32768) / 256);
+            } else {
+                $normalized = $avg; // Already 0–255
+            }
+
+            $result[] = max(0, min(255, (int)$normalized));
         }
 
         fclose($stream);
         unlink($wavFile);
-
         return $result;
     }
 
@@ -87,13 +104,6 @@ class WaveGenerator
         return $peek / 8;
     }
 
-    private function findValues($byte1, $byte2)
-    {
-        $byte1 = hexdec(bin2hex($byte1));
-        $byte2 = hexdec(bin2hex($byte2));
-        return ($byte1 + ($byte2 * 256));
-    }
-
     /**
      * @param int $dataPoint
      */
@@ -102,42 +112,19 @@ class WaveGenerator
         return $dataPoint % $detail != 0;
     }
 
-    /**
-     * @param resource $wavStream
-     */
-    protected function numberOfBytesDependingOnBitRate(int $bitRate, $wavStream): array
-    {
-        $bytes = [];
-        for ($i = 0; $i < $bitRate; $i++) {
-            $bytes[$i] = fgetc($wavStream);
-        }
-        return $bytes;
-    }
-
     protected function isStereo($heading): bool
     {
-        $channel = hexdec(substr($heading, 0, 2));
-        return $channel == 2;
+        if (strlen($heading) < 2) return false;
+        return hexdec(substr($heading, 0, 2)) === 2;
     }
 
     protected function createOriginWavFile(string $mp3File): string
     {
         $tempName = random_int(10000, 99999);
-        $tempMp3  = $this->tempPath . "/$tempName.mp3";
         $tempWav  = $this->tempPath . "/$tempName.wav";
-        $command  = "lame $mp3File -m m -S -f -b 16 --resample 8 $tempMp3 && lame -S --decode $tempMp3 $tempWav";
+
+        $command = "ffmpeg -y -i $mp3File -vn -map a -ac 1 -ar 44100 -acodec pcm_s16le $tempWav";
         shell_exec($command);
-        unlink($tempMp3);
         return $tempWav;
     }
-
-    /**
-     * for memory optimization
-     * @param resource $wavStream
-     */
-    protected function skipBytes($wavStream, int $ratio): void
-    {
-        fseek($wavStream, $ratio, SEEK_CUR);
-    }
-
 }
