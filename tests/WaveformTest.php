@@ -7,6 +7,14 @@ use PHPUnit\Framework\TestCase;
 
 class WaveformTest extends TestCase
 {
+    public function setUp(): void
+    {
+        parent::setUp();
+        $tmp = __DIR__ . '/../temp';
+        if (!is_dir($tmp)) {
+            mkdir($tmp, 0777, true);
+        }
+    }
     public function testMp3ToSvgGeneration()
     {
         $generator     = new WaveGenerator(__DIR__ . '/../temp');
@@ -16,15 +24,12 @@ class WaveformTest extends TestCase
         $peeks         = $converter->wavesToScaledPeeks($waveform);
         $jsonPeeks     = json_encode($peeks);
         $expectedPeeks = file_get_contents(__DIR__ . '/fixtures/from-mp3/expectedPeeks.json');
-        $this->assertSame($jsonPeeks, $expectedPeeks);
+        $this->assertSame($expectedPeeks, $jsonPeeks);
 
         $svgGenerator = new WaveformSVGGeneratorPolygon();
         $svg          = $svgGenerator->generateSVG($peeks);
         $expectedSvg  = file_get_contents(__DIR__ . '/fixtures/from-mp3/expectedWaveform.svg');
-        $this->assertSame($svg, $expectedSvg);
-
-        file_put_contents(__DIR__ . "/results/peeks.json", $jsonPeeks);
-        file_put_contents(__DIR__ . "/results/waveform.svg", $svg);
+        $this->assertSame($expectedSvg, $svg);
     }
 
     public function testWrongFormatPeekGeneration()
@@ -34,7 +39,7 @@ class WaveformTest extends TestCase
         $testedMp3     = __DIR__ . '/fixtures/from-wrong-format/actualy-mp4.mp3';
         $waveform      = $generator->generateWaves($testedMp3);
         $peeks         = $converter->wavesToScaledPeeks($waveform);
-        $this->assertSame($peeks, [0]);
+        $this->assertSame([0], $peeks);
     }
 
     public function getWaveformTests(): array
