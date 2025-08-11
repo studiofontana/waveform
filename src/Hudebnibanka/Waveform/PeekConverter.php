@@ -12,6 +12,10 @@ class PeekConverter
             return [];
         }
 
+        if (count($waveform) === 1 && (float)$waveform[0] === 0.0) {
+            return [0];
+        }
+
         $peeks = $this->cutOfCenterWaveLine($waveform);
         return $this->scaleDownPeeks($peeks);
     }

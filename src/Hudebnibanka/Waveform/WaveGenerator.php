@@ -20,6 +20,10 @@ class WaveGenerator
      */
     public function generateWaves(string $mp3File): array
     {
+        if (!$this->isMp3($mp3File)) {
+            return [0];
+        }
+
         $wavFile = $this->createOriginWavFile($mp3File);
         $stream  = fopen($wavFile, 'rb');
 
@@ -126,5 +130,13 @@ class WaveGenerator
         $command = "ffmpeg -y -i $mp3File -vn -map a -ac 1 -ar 44100 -acodec pcm_s16le $tempWav";
         shell_exec($command);
         return $tempWav;
+    }
+
+    protected function isMp3(string $file): bool
+    {
+        $cmd = 'ffprobe -v error -select_streams a:0 -show_entries stream=codec_name '
+            . '-of default=nk=1:nw=1 ' . escapeshellarg($file) . ' 2>&1';
+        exec($cmd, $out, $code);
+        return $code === 0 && isset($out[0]) && trim($out[0]) === 'mp3';
     }
 }
