@@ -123,7 +123,7 @@ class WaveGenerator
         $tempName = random_int(10000, 99999);
         $tempWav  = $this->tempPath . "/$tempName.wav";
 
-        $command = "ffmpeg -y -i $mp3File -vn -map a -ac 1 -ar 44100 -acodec pcm_s16le $tempWav";
+        $command = "ffmpeg -hide_banner -loglevel error -y -i $mp3File -vn -map a -ac 1 -ar 44100 -acodec pcm_s16le $tempWav";
         shell_exec($command);
         return $tempWav;
     }
